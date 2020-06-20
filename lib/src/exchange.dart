@@ -41,6 +41,10 @@ class Exchange {
       return null;
     }
 
+    if (map['error'] != null) {
+      throw StateError(map['error']);
+    }
+
     return Exchange(
       rates: Map<String, double>.from(map['rates']),
       base: map['base'],
@@ -68,3 +72,4 @@ class Exchange {
   @override
   int get hashCode => rates.hashCode ^ base.hashCode ^ date.hashCode;
 }
+

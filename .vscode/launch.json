@@ -5,10 +5,31 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Dart",
+      "name": "Launch",
       "program": "bin/exchangeview.dart",
       "request": "launch",
       "type": "dart"
+    },
+    {
+      "name": "Launch (help)",
+      "program": "bin/exchangeview.dart",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--help"]
+    },
+    {
+      "name": "Launch (verbose)",
+      "program": "bin/exchangeview.dart",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--verbose"]
+    },
+    {
+      "name": "Launch (invalid currency, verbose)",
+      "program": "bin/exchangeview.dart",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--from", "JPY", "--to", "AFN", "--verbose"]
     }
   ]
 }

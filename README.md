@@ -38,17 +38,20 @@ An hourly rate of 45.00 EUR is equal to about 5389.65 JPY
 For help, use `--help`.
 
 ```shell
-ExchangeView is a tool to help with currency conversion and other calculations related to invoicing.
+ExchangeView is a tool to help with currency conversion 
+and other calculations related to invoicing.
 
 usage: exchangeview
 -r, --rate=<HOURLY RATE>      The billable hourly rate in the source currency.
                               If provided, the hourly rate will be converted
                               from the source to the target currency.
+                              For example: --rate 50.0
 -f, --from=<CURRENCY CODE>    The source currency.
                               (defaults to "USD")
 -t, --to=<CURRENCY CODE>      The target currency.
                               (defaults to "EUR")
 -h, --help                    Display this help menu.
+    --version                 Display the version for exchangeview.
 -v, --verbose                 Enable verbose logging.
 -a, --[no-]ansi               Enable or disable ANSI logging.
                               (defaults to on)

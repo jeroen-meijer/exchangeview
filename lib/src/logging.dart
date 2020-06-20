@@ -1,7 +1,17 @@
 import 'package:cli_util/cli_logging.dart';
+import 'package:exchangeview/src/config.dart';
 
-Logger logger;
+typedef LogCallback = void Function(String);
 
-final log = logger.stdout;
-final err = logger.stderr;
-final trace = logger.trace;
+Logger logger = Logger.standard(ansi: Ansi(true));
+
+LogCallback get log => logger.stdout;
+LogCallback get err => logger.stderr;
+LogCallback get trace => logger.trace;
+
+extension LoggerUtils on Logger {
+  static Logger fromConfig(Config config) {
+    final ansi = Ansi(config.ansi);
+    return config.verbose ? Logger.verbose(ansi: ansi) : Logger.standard(ansi: ansi);
+  }
+}

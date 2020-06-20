@@ -1,131 +1,32 @@
-import 'package:args/args.dart';
-import 'package:cli_util/cli_logging.dart';
+import 'package:exchangeview/src/currency.dart';
 import 'package:http/http.dart' as http;
-import 'package:exchangeview/src/colors.dart';
-import 'package:exchangeview/src/logging.dart';
-import 'package:exchangeview/src/exchange.dart';
 import 'package:meta/meta.dart';
 
-const appName = 'exchangeview';
+import 'package:exchangeview/src/colors.dart';
+import 'package:exchangeview/src/config.dart';
+import 'package:exchangeview/src/exchange.dart';
+import 'package:exchangeview/src/logging.dart';
+import 'package:exchangeview/src/utils.dart';
 
 @immutable
 class CliApp {
-  const CliApp({
-    @required this.rate,
-    @required this.sourceCurrency,
-    @required this.targetCurrency,
-  });
+  const CliApp(this.config);
 
-  final double rate;
-  final String sourceCurrency;
-  final String targetCurrency;
+  final Config config;
 
-  bool get shouldCalculateRate => rate != null;
-
-  static final _argParser = ArgParser()
-    ..addOption(
-      'rate',
-      abbr: 'r',
-      help: 'The billable hourly rate in the source currency.\n'
-          'If provided, the hourly rate will be converted\n'
-          'from the source to the target currency.',
-      valueHelp: 'HOURLY RATE',
-      callback: (String value) {
-        if (value != null && double.tryParse(value) == null) {
-          throw FormatException('Hourly rate must be a number', value);
-        }
-      },
-    )
-    ..addOption(
-      'from',
-      abbr: 'f',
-      help: 'The source currency.',
-      valueHelp: 'CURRENCY CODE',
-      defaultsTo: 'USD',
-      callback: (String value) {
-        if (value.length != 3) {
-          throw FormatException('Source currency must have exactly 3 characters.', value);
-        }
-      },
-    )
-    ..addOption(
-      'to',
-      abbr: 't',
-      help: 'The target currency.',
-      valueHelp: 'CURRENCY CODE',
-      defaultsTo: 'EUR',
-      callback: (String value) {
-        if (value.length != 3) {
-          throw FormatException('Target currency must have exactly 3 characters.', value);
-        }
-      },
-    )
-    ..addFlag(
-      'help',
-      abbr: 'h',
-      help: 'Display this help menu.',
-      negatable: false,
-    )
-    ..addFlag(
-      'verbose',
-      abbr: 'v',
-      help: 'Enable verbose logging.',
-      negatable: false,
-    )
-    ..addFlag(
-      'ansi',
-      abbr: 'a',
-      help: 'Enable or disable ANSI logging.',
-      negatable: true,
-      defaultsTo: true,
-    );
-
-  static Future<void> processAndRun(final List<String> args) async {
-    ArgResults options;
-
-    try {
-      options = _argParser.parse(args);
-    } on FormatException catch (e) {
-      throw ArgError(e.message);
-    }
-
-    final ansi = Ansi(options['ansi'] == true);
-
-    if (options.wasParsed('verbose')) {
-      logger = Logger.verbose(ansi: ansi);
-    } else {
-      logger = Logger.standard(ansi: ansi);
-    }
-
-    if (options['help']) {
-      printUsage();
-      return;
-    }
-
-    final rawRate = options['rate'];
-
-    final app = CliApp(
-      rate: rawRate == null ? null : double.parse(options['rate']),
-      sourceCurrency: options['from'],
-      targetCurrency: options['to'],
-    );
-
-    return app._run();
-  }
-
-  Future<void> _run() async {
+  Future<void> run() async {
     log(subtle('Date: ${DateTime.now()}'));
 
-    final sourceCurrencyColor = getColorForCurrencyCode(sourceCurrency);
-    final targetCurrencyColor = getColorForCurrencyCode(targetCurrency);
+    final source = Currency.fromCodeOrDefault(config.sourceCurrency);
+    final target = Currency.fromCodeOrDefault(config.targetCurrency);
 
     final fetchProgress = logger.progress(
-      'Fetching current exchange rate for ${sourceCurrencyColor(sourceCurrency)} and ${targetCurrencyColor(targetCurrency)}',
+      'Fetching current exchange rate for ${source.color(source.code)} and ${target.color(target.code)}',
     );
 
     final url = 'https://api.exchangeratesapi.io/latest?'
-        'base=$sourceCurrency&'
-        'symbols=$targetCurrency';
+        'base=${source.code}&'
+        'symbols=${target.code}';
     trace('Fetching from url $url');
 
     final response = await http.get(url);
@@ -137,44 +38,59 @@ class CliApp {
     );
     log('');
 
-    final exchange = Exchange.fromJson(response.body);
-    trace('Deerialization complete.');
+    Exchange exchange;
 
-    final exchangeRate = exchange.rates[targetCurrency];
-
-    log('${1.toStringAsFixed(2)} ${sourceCurrencyColor(sourceCurrency)} = ${bold(exchangeRate)} ${targetCurrencyColor(bold(targetCurrency))}');
-
-    if (shouldCalculateRate) {
-      final hourlyRateAfterExchange = rate * exchangeRate;
-      log(
-        'An hourly rate of ${rate.toStringAsFixed(2)} ${sourceCurrencyColor(sourceCurrency)} is equal to about ${bold(hourlyRateAfterExchange.toStringAsFixed(2))} ${targetCurrencyColor(bold(targetCurrency))}',
-      );
-    }
-  }
-
-  static void printUsage({bool showWelcome = true}) {
-    assert(showWelcome != null);
-    if (showWelcome) {
-      log(
-        '${blue('ExchangeView')} is a tool to help with currency conversion '
-        'and other calculations related to invoicing.\n',
+    try {
+      exchange = Exchange.fromJson(response.body);
+      trace('Deserialization complete.');
+    } on StateError catch (e) {
+      throw ExchangeError(
+        rawMessage: e.message,
+        currencyCodes: {source, target}.map((c) => c.code).toSet(),
       );
     }
 
-    log(
-      'usage: ${bold(appName)}\n'
-      '${_argParser.usage}',
-    );
+    final exchangeRate = exchange.rates[target.code];
+    final baseAmountAfterExchange = source.baseAmount * exchangeRate;
+
+    log('${source.format()} ${source.color(source.code)} = ${bold(target.format(baseAmountAfterExchange))} ${target.color(bold(target.code))}');
+
+    if (config.shouldCalculateRate) {
+      final hourlyRateAfterExchange = config.rate * exchangeRate;
+      log(
+        'An hourly rate of ${source.format(config.rate)} ${source.color(source.code)} '
+        'is equal to about ${bold(target.format(hourlyRateAfterExchange))} ${target.color(bold(target.code))}',
+      );
+    }
   }
 
   @override
-  String toString() => 'CliApp(rate: $rate, sourceCurrency: $sourceCurrency, targetCurrency: $targetCurrency)';
+  String toString() => 'CliApp(config: $config)';
 }
 
-class ArgError implements Exception {
-  final String message;
-  ArgError(this.message);
+class ExchangeError implements Exception {
+  const ExchangeError({
+    @required String rawMessage,
+    @required Set<String> currencyCodes,
+  })  : assert(rawMessage != null),
+        _rawMessage = rawMessage,
+        _currencyCodes = currencyCodes;
 
-  @override
-  String toString() => message;
+  final String _rawMessage;
+  final Set<String> _currencyCodes;
+
+  String get message {
+    if (!_rawMessage.containsAny(_currencyCodes)) {
+      return _rawMessage;
+    }
+
+    final errorCurrencies = _currencyCodes.safeWhere(_rawMessage.contains);
+
+    final clarification = 'It\'s most likely the following currencies are not supported: ${errorCurrencies.join(', ')}';
+
+    return '''
+$_rawMessage
+
+${none(yellow(clarification))}''';
+  }
 }
