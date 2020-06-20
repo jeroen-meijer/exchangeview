@@ -1,6 +1,6 @@
 # ExchangeView
 
-A simple CLI tool to help with currency conversion and other calculations related to invoicing.
+**A simple CLI tool to help with currency conversion and other calculations related to invoicing.**
 
 ## What is this tool?
 
