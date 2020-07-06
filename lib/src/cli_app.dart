@@ -53,7 +53,7 @@ class CliApp {
     final exchangeRate = exchange.rates[target.code];
     final baseAmountAfterExchange = source.baseAmount * exchangeRate;
 
-    log('${source.format()} ${source.color(source.code)} = ${bold(target.format(baseAmountAfterExchange))} ${target.color(bold(target.code))}');
+    log('${source.format()} ${source.color(source.code)} = ${bold(baseAmountAfterExchange)} ${target.color(bold(target.code))}');
 
     if (config.shouldCalculateRate) {
       final hourlyRateAfterExchange = config.rate * exchangeRate;

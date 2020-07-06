@@ -47,7 +47,7 @@ class Config {
     }
 
     return Config._(
-      rate: options[keyRate],
+      rate: double.parse(options[keyRate]),
       sourceCurrency: options[keySourceCurrency],
       targetCurrency: options[keyTargetCurrency],
       help: options[keyHelp],

@@ -9,7 +9,7 @@ class Currency {
     int fractionDigits,
     int baseAmount,
   })  : color = color ?? green,
-        fractionDigits = fractionDigits ?? 2,
+        fractionDigits = fractionDigits ?? FractionDigits.standard,
         baseAmount = baseAmount ?? 1;
 
   final String code;
@@ -35,7 +35,7 @@ class Currency {
   static final jpy = Currency._(
     'JPY',
     color: red,
-    fractionDigits: 0,
+    fractionDigits: FractionDigits.none,
     baseAmount: 100,
   );
 
@@ -81,4 +81,9 @@ class Currency {
   int get hashCode {
     return code.hashCode ^ color.hashCode ^ fractionDigits.hashCode ^ baseAmount.hashCode;
   }
+}
+
+abstract class FractionDigits {
+  static const standard = 2;
+  static const none = 0;
 }

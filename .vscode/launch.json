@@ -11,6 +11,13 @@
       "type": "dart"
     },
     {
+      "name": "Launch (rate of 25.00)",
+      "program": "bin/exchangeview.dart",
+      "request": "launch",
+      "type": "dart",
+      "args": ["-r", "25.00"]
+    },
+    {
       "name": "Launch (help)",
       "program": "bin/exchangeview.dart",
       "request": "launch",
